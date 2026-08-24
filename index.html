@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>1211 英式英语播放器</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f5f6f8;color:#222;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei",sans-serif}.wrap{max-width:760px;margin:auto;padding:28px 16px 50px}h1{text-align:center;margin:0 0 6px;font-size:28px}.sub{text-align:center;color:#777;margin-bottom:22px}.card,.settings{background:#fff;border-radius:18px;padding:24px;box-shadow:0 5px 20px rgba(0,0,0,.07)}.progress{color:#888;font-size:14px}.word{font-size:42px;font-weight:700;margin:12px 0 5px}.ipa{color:#666;font-size:18px}.meaning{font-size:20px;line-height:1.6;margin-top:12px}.count{color:#777;font-size:14px}.example{margin-top:20px;padding:15px;background:#f7f8fa;border-radius:12px;line-height:1.6}.excn{color:#666;margin-top:6px}.buttons{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:20px}button{border:0;border-radius:11px;padding:14px;font-size:16px;background:#eee;cursor:pointer}.primary{grid-column:1/-1;background:#222;color:#fff;font-size:18px}.nav{display:flex;gap:10px;margin-top:12px}.nav button{flex:1}.settings{margin-top:18px}.row{display:flex;justify-content:space-between;align-items:center;margin:12px 0}select{padding:8px;border:1px solid #ccc;border-radius:8px}@media(max-width:560px){.word{font-size:36px}.buttons{grid-template-columns:1fr}.primary{grid-column:auto}}
+</style></head>
+<body><div class="wrap">
+<h1>1211 英式英语播放器</h1><div class="sub">真实音频：英文 → 中文 → 英文例句</div>
+<div class="card">
+<div class="progress" id="progress">加载中...</div><div class="word" id="word">—</div><div class="ipa" id="ipa">—</div><div class="meaning" id="meaning">—</div><div class="count" id="count"></div>
+<div class="example"><div id="exampleEn">—</div><div class="excn" id="exampleCn">—</div></div>
+<div class="buttons"><button class="primary" onclick="playSequence()">🔊 播放：英文 → 中文 → 英文例句</button><button onclick="playEnglish()">英文</button><button onclick="playChinese()">中文</button><button onclick="playExample()">英文例句</button></div>
+<div class="nav"><button onclick="prev()">← 上一个</button><button onclick="next()">下一个 →</button></div>
+</div>
+<div class="settings"><div class="row"><span>英文单词重复</span><select id="repeat"><option>1</option><option selected>2</option><option>3</option></select></div><div class="row"><span>播放完自动下一个</span><input id="auto" type="checkbox"></div></div>
+<audio id="player" preload="auto"></audio>
+</div>
+<script>
+let words=[],i=0,stopped=false,repeat=2;const audio=document.getElementById('player');
+async function init(){const r=await fetch('words.json?'+Date.now(),{cache:'no-store'});words=await r.json();show();}
+function show(){const w=words[i];progress.textContent=`${i+1} / ${words.length}`;word.textContent=w.word;ipa.textContent=w.phonetic||'';meaning.textContent=w.meaning;count.textContent=w.countable?'名词：'+w.countable:'';exampleEn.textContent=w.example||'';exampleCn.textContent=w.exampleCn||'';}
+function src(kind){return `audio/${String(i+1).padStart(3,'0')}-${kind}.mp3`}
+function playFile(kind,done){if(stopped)return;audio.src=src(kind);audio.currentTime=0;audio.onended=done;audio.play().catch(()=>alert('音频播放失败，请先点击页面上的播放按钮，并确认 audio 文件夹已上传。'));}
+function playEnglish(){stopped=false;let n=0;function one(){n++;playFile('en',()=>n<Number(repeat.value)?setTimeout(one,300):null)}one()}
+function playChinese(){stopped=false;playFile('cn')}
+function playExample(){stopped=false;playFile('ex')}
+function playSequence(){stopped=false;let n=0;function en(){if(stopped)return;n++;playFile('en',()=>n<Number(repeat.value)?setTimeout(en,350):setTimeout(cn,500))}function cn(){playFile('cn',()=>setTimeout(ex,700))}function ex(){playFile('ex',()=>{if(auto.checked)setTimeout(()=>{next();playSequence()},1000)})}en()}
+function next(){stopped=true;audio.pause();i=(i+1)%words.length;show()}
+function prev(){stopped=true;audio.pause();i=(i-1+words.length)%words.length;show()}
+repeat.onchange=()=>localStorage.setItem('1211_repeat',repeat.value);const saved=localStorage.getItem('1211_repeat');if(saved)repeat.value=saved;init();
+</script></body></html>

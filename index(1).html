@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>1211 英式英语播放器</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#f5f6f8;color:#222;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei",sans-serif}
+.container{max-width:760px;margin:0 auto;padding:30px 18px 50px}
+h1{text-align:center;margin-bottom:8px;font-size:30px}
+.subtitle{text-align:center;color:#777;margin-bottom:25px}
+.card{background:white;border-radius:18px;padding:28px 24px;box-shadow:0 5px 20px rgba(0,0,0,.08)}
+.progress{color:#888;font-size:14px;margin-bottom:15px}
+.word{font-size:42px;font-weight:700;margin-bottom:8px}
+.phonetic{color:#666;font-size:18px;margin-bottom:15px}
+.meaning{font-size:19px;line-height:1.7}
+.example{margin-top:22px;padding:16px;background:#f7f8fa;border-radius:12px}
+.example-en{font-size:17px;line-height:1.6}
+.example-cn{margin-top:8px;color:#666;line-height:1.6}
+.buttons{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:22px}
+button{border:none;border-radius:12px;padding:14px 10px;font-size:16px;cursor:pointer;background:#eee}
+button:hover{background:#e3e3e3}
+.primary{background:#222;color:white}
+.primary:hover{background:#000}
+.big{grid-column:span 2;font-size:18px;padding:16px}
+.navigation{display:flex;gap:12px;margin-top:15px}
+.navigation button{flex:1}
+.settings{margin-top:20px;background:white;padding:20px;border-radius:15px}
+.setting{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+.setting:last-child{margin-bottom:0}
+select{padding:8px 12px;border-radius:8px;border:1px solid #ccc;font-size:15px}
+.auto{display:flex;align-items:center;gap:10px}
+.auto input{width:20px;height:20px}
+@media(max-width:600px){
+.container{padding:20px 12px 40px}
+h1{font-size:25px}
+.card{padding:22px 18px}
+.word{font-size:34px}
+.buttons{grid-template-columns:1fr}
+.big{grid-column:span 1}
+}
+</style>
+</head>
+<body>
+<div class="container">
+<h1>1211 英式英语播放器</h1>
+<div class="subtitle">单词 · 音标 · 中文释义 · 英式发音</div>
+
+<div class="card">
+<div class="progress" id="progress">加载中...</div>
+<div class="word" id="word">loading...</div>
+<div class="phonetic" id="phonetic"></div>
+<div class="meaning" id="meaning">正在加载单词……</div>
+
+<div class="example">
+<div class="example-en" id="exampleEn"></div>
+<div class="example-cn" id="exampleCn"></div>
+</div>
+
+<div class="buttons">
+<button class="primary big" onclick="speakWord()">🔊 播放单词</button>
+<button onclick="speakExample()">▶ 播放例句</button>
+<button onclick="speakBoth()">▶▶ 单词 + 例句</button>
+</div>
+
+<div class="navigation">
+<button onclick="previousWord()">← 上一个</button>
+<button onclick="nextWord()">下一个 →</button>
+</div>
+</div>
+
+<div class="settings">
+<div class="setting">
+<span>播放速度</span>
+<select id="speed">
+<option value="0.6">0.6×</option>
+<option value="0.8">0.8×</option>
+<option value="1" selected>1.0×</option>
+<option value="1.2">1.2×</option>
+<option value="1.5">1.5×</option>
+</select>
+</div>
+
+<div class="setting">
+<span>每词重复</span>
+<select id="repeat">
+<option value="1">1 次</option>
+<option value="2" selected>2 次</option>
+<option value="3">3 次</option>
+<option value="5">5 次</option>
+</select>
+</div>
+
+<div class="setting auto">
+<input type="checkbox" id="autoPlay">
+<label for="autoPlay">自动播放下一个</label>
+</div>
+</div>
+</div>
+
+<script>
+let words=[];
+let currentIndex=0;
+
+async function loadWords(){
+  try{
+    const response=await fetch("words.json");
+    if(!response.ok) throw new Error("words.json 加载失败");
+    words=await response.json();
+    if(!Array.isArray(words)||!words.length) throw new Error("words.json 没有单词");
+    showWord();
+  }catch(error){
+    console.error(error);
+    document.getElementById("word").textContent="加载失败";
+    document.getElementById("meaning").textContent="请检查 words.json 是否和 index.html 在同一个文件夹。";
+  }
+}
+
+function showWord(){
+  if(!words.length)return;
+  const item=words[currentIndex];
+  document.getElementById("progress").textContent=`${currentIndex+1} / ${words.length}`;
+  document.getElementById("word").textContent=item.word||"";
+  document.getElementById("phonetic").textContent=item.phonetic||"";
+  document.getElementById("meaning").textContent=item.meaning||"";
+  document.getElementById("exampleEn").textContent=item.example||"";
+  document.getElementById("exampleCn").textContent=item.exampleCn||"";
+}
+
+function getBritishVoice(){
+  const voices=speechSynthesis.getVoices();
+  return voices.find(v=>v.lang==="en-GB") ||
+         voices.find(v=>v.lang.toLowerCase().startsWith("en-gb")) ||
+         null;
+}
+
+function speakText(text,callback){
+  if(!text)return;
+  speechSynthesis.cancel();
+  const utterance=new SpeechSynthesisUtterance(text);
+  const voice=getBritishVoice();
+  if(voice)utterance.voice=voice;
+  utterance.lang="en-GB";
+  utterance.rate=Number(document.getElementById("speed").value);
+  utterance.pitch=1;
+  utterance.onend=()=>{if(callback)callback()};
+  speechSynthesis.speak(utterance);
+}
+
+function speakWord(){
+  const item=words[currentIndex];
+  if(!item)return;
+  const repeat=Number(document.getElementById("repeat").value);
+  let count=0;
+  function play(){
+    count++;
+    speakText(item.word,()=>{
+      if(count<repeat)setTimeout(play,350);
+      else autoNext();
+    });
+  }
+  play();
+}
+
+function speakExample(){
+  const item=words[currentIndex];
+  if(item)speakText(item.example,autoNext);
+}
+
+function speakBoth(){
+  const item=words[currentIndex];
+  if(!item)return;
+  speakText(item.word,()=>{
+    setTimeout(()=>speakText(item.example,autoNext),500);
+  });
+}
+
+function autoNext(){
+  if(!document.getElementById("autoPlay").checked)return;
+  setTimeout(()=>{
+    nextWord();
+    speakBoth();
+  },1000);
+}
+
+function nextWord(){
+  if(!words.length)return;
+  currentIndex=(currentIndex+1)%words.length;
+  speechSynthesis.cancel();
+  showWord();
+}
+
+function previousWord(){
+  if(!words.length)return;
+  currentIndex=(currentIndex-1+words.length)%words.length;
+  speechSynthesis.cancel();
+  showWord();
+}
+
+speechSynthesis.onvoiceschanged=()=>getBritishVoice();
+loadWords();
+</script>
+</body>
+</html>

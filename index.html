@@ -1,101 +1,16 @@
 <!doctype html>
 <html lang="zh-CN">
-<head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>1211 英式英语播放器</title>
-<style>
-body{font-family:system-ui,-apple-system,"Noto Sans SC",sans-serif;max-width:720px;margin:auto;padding:22px;line-height:1.6}
-.card{border:1px solid #ccc;border-radius:16px;padding:22px;margin:16px 0}
-button,select,input{font-size:16px;padding:10px;margin:5px;border-radius:10px;border:1px solid #bbb}
-button{cursor:pointer}.word{font-size:40px;font-weight:700}.ipa{font-size:20px}.cn{font-size:20px}
-.small{color:#666}.controls{display:flex;flex-wrap:wrap;gap:5px}
-</style>
-</head>
-<body>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>body{max-width:700px;margin:auto;padding:20px;font-family:sans-serif}.card{border:1px solid #ccc;border-radius:15px;padding:20px}.word{font-size:40px;font-weight:bold}button{padding:10px;margin:5px}</style>
 <h1>1211 英式英语播放器</h1>
-<p class="small">目前内置你现有的 24 个 1211 词汇。使用手机浏览器打开即可。</p>
-
-<div class="card">
-  <div id="num" class="small"></div>
-  <div id="word" class="word"></div>
-  <div id="ipa" class="ipa"></div>
-  <div id="cn" class="cn"></div>
-</div>
-
-<div class="controls">
-<button onclick="speakWord()">🔊 播放单词</button>
-<button onclick="speakExample()">▶ 播放例句</button>
-<button onclick="speakAll()">▶▶ 单词+例句</button>
-<button onclick="toggleAuto()" id="autoBtn">自动播放：关</button>
-<button onclick="next()">下一个 →</button>
-<button onclick="prev()">← 上一个</button>
-</div>
-
-<div class="card">
-<label>播放速度：
-<select id="rate">
-<option value="0.7">0.7×</option><option value="0.8">0.8×</option>
-<option value="0.9">0.9×</option><option value="1" selected>1.0×</option>
-<option value="1.1">1.1×</option>
-</select>
-</label><br>
-<label>每词重复：
-<select id="repeat">
-<option value="1">1 次</option><option value="2" selected>2 次</option><option value="3">3 次</option>
-</select>
-</label>
-</div>
-
-<p class="small">提示：首次点击“播放”后，浏览器可能才允许语音播放。声音取决于鸿蒙系统中已安装的英文语音。</p>
-
+<div class="card"><div id="num"></div><div id="word" class="word"></div><div id="ipa"></div><div id="cn"></div></div>
+<button onclick="speak()">播放单词</button><button onclick="next()">下一个</button>
 <script>
-/*
-  1211 云同步预留：
-  将来只需把 WORDS_URL 指向一个在线 JSON 词库，
-  播放器即可读取最新 1211。当前为空，因此使用本地词库离线运行。
-  JSON 格式：[{"word":"...","ipa":"...","cn":"...","example":"..."}]
-*/
-const WORDS_URL = "";
-
-const words = [
-["parameter","/pəˈræmɪtə(r)/","参数；范围；限制条件","The model has several parameters that need to be adjusted."],
-["aversion","/əˈvɜːʃən/","厌恶；回避倾向","He has a strong aversion to unnecessary risk."],
-["essence","/ˈesns/","本质；精髓；核心","The essence of the argument is quite simple."],
-["obligation","/ˌɒblɪˈɡeɪʃən/","义务；责任；职责","Researchers have an obligation to follow ethical standards."],
-["revolve","/rɪˈvɒlv/","旋转；围绕；以……为中心","The discussion revolves around one central issue."],
-["turmoil","/ˈtɜːmɔɪl/","混乱；动荡","The healthcare system was in turmoil."],
-["beloved","/bɪˈlʌvɪd/","挚爱的；深爱的；心爱的人","She was a beloved member of the community."],
-["discourse","/dɪˈskɔːs/","话语；论述；学术讨论；语篇","This issue has become part of academic discourse."],
-["commend","/kəˈmend/","表扬；称赞；推荐","The professor commended her for her excellent work."],
-["anecdote","/ˈænɪkdəʊt/","趣闻；轶事；小故事","The lecturer began with a short anecdote."],
-["medieval","/ˌmediˈiːvl/","中世纪的；中古时期的","The course covers medieval medicine."],
-["fluid","/ˈfluːɪd/","流动的；液体；流体","Blood is a biological fluid."],
-["peculiarity","/pɪˌkjuːliˈærəti/","特殊之处；独特之处","One peculiarity of the system is its flexibility."],
-["myth","/mɪθ/","神话；错误观念；谬论","It is a common myth that intelligence is fixed."],
-["dissertation","/ˌdɪsəˈteɪʃən/","学位论文；毕业论文","She is working on her final-year dissertation."],
-["adhere","/ədˈhɪə(r)/","遵守；遵循；坚持；附着","Researchers must adhere to ethical guidelines."],
-["cumulative","/ˈkjuːmjələtɪv/","累积的；累计的；累积量","The cumulative effect can be significant."],
-["manifest","/ˈmænɪfest/","明显的；显现；表现；清单","The problem manifested itself during the experiment."],
-["hover","/ˈhɒvə(r)/","悬停；徘徊；在某水平附近波动","The temperature hovered around 20 degrees Celsius."],
-["stunning","/ˈstʌnɪŋ/","惊艳的；极其出色的；令人震撼的","The researchers achieved stunning results."],
-["bizarre","/bɪˈzɑː(r)/","怪异的；离奇的；奇怪得不寻常的","The experiment produced some bizarre results."],
-["surge","/sɜːdʒ/","激增；猛增；涌动","There has been a surge in demand for AI-based healthcare."],
-["loop","/luːp/","循环；回路；循环运行","The program runs in a loop until the condition is satisfied."],
-["accelerate","/əkˈseləreɪt/","加速；促进；加快","AI could accelerate the development of new treatments."]
-];
-
-let i=0, auto=false, timer=null;
-const $=id=>document.getElementById(id);
-function render(){let w=words[i];$("num").textContent=`${String(i+1).padStart(2,"0")} / ${words.length}`;$("word").textContent=w[0];$("ipa").textContent=w[1];$("cn").textContent=w[2];}
-function voice(text, lang="en-GB"){speechSynthesis.cancel();let u=new SpeechSynthesisUtterance(text);u.lang=lang;u.rate=+$("rate").value;u.onend=()=>{};speechSynthesis.speak(u);}
-function speakWord(){let n=+$("repeat").value, c=0;function go(){if(c++<n){speechSynthesis.cancel();let u=new SpeechSynthesisUtterance(words[i][0]);u.lang="en-GB";u.rate=+$("rate").value;u.onend=go;speechSynthesis.speak(u)}}go();}
-function speakExample(){voice(words[i][3]);}
-function speakAll(){speechSynthesis.cancel();let n=+$("repeat").value,c=0;function go(){if(c++<n){let u=new SpeechSynthesisUtterance(words[i][0]);u.lang="en-GB";u.rate=+$("rate").value;u.onend=()=>{let e=new SpeechSynthesisUtterance(words[i][3]);e.lang="en-GB";e.rate=+$("rate").value;e.onend=go;speechSynthesis.speak(e)};speechSynthesis.speak(u)}}go();}
-function next(){i=(i+1)%words.length;render();if(auto) speakAll();}
-function prev(){i=(i-1+words.length)%words.length;render();}
-function toggleAuto(){auto=!auto;$("autoBtn").textContent="自动播放："+(auto?"开":"关");if(auto)speakAll();else speechSynthesis.cancel();}
-render();
+let ws=[],i=0;
+fetch('words.json').then(x=>x.json()).then(x=>{ws=x;show()});
+function show(){let w=ws[i];num.textContent=(i+1)+' / '+ws.length;word.textContent=w.word;ipa.textContent=w.ipa;cn.textContent=w.cn}
+function next(){i=(i+1)%ws.length;show()}
+function speak(){let a=new SpeechSynthesisUtterance(ws[i].word);a.lang='en-GB';speechSynthesis.speak(a)}
 </script>
-</body>
-</html>

@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="zh-CN">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>1211 英式英语播放器</title>
+<style>
+body{font-family:sans-serif;background:#f5f7fb;max-width:700px;margin:auto;padding:20px}
+.card{background:white;border-radius:20px;padding:25px;margin-top:20px}
+.word{text-align:center;font-size:48px;font-weight:bold}
+.ipa,.meaning{text-align:center;margin:15px;font-size:20px}
+button{padding:12px;margin:5px;border-radius:10px}
+</style>
+<h1>1211 英式英语播放器</h1>
+<div class="card">
+<div id="num"></div>
+<div id="word" class="word"></div>
+<div id="ipa" class="ipa"></div>
+<div id="meaning" class="meaning"></div>
+<button onclick="speak()">🔊 英式发音</button>
+<button onclick="prev()">←</button>
+<button onclick="next()">→</button>
+</div>
+<script>
+let words=[],i=0;
+fetch("words.json").then(r=>r.json()).then(d=>{words=d;show()});
+function show(){let w=words[i];num.innerText=(i+1)+"/"+words.length;word.innerText=w.word;ipa.innerText=w.ipa+" "+w.pos+(w.countable?" "+w.countable:"");meaning.innerText=w.meaning}
+function next(){i=(i+1)%words.length;show()}
+function prev(){i=(i-1+words.length)%words.length;show()}
+function speak(){let u=new SpeechSynthesisUtterance(words[i].word);u.lang="en-GB";speechSynthesis.speak(u)}
+</script>

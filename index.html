@@ -80,7 +80,7 @@ let words=[];
 let index=0;
 
 
-fetch("./words.json")
+fetch("words.json")
 .then(response=>{
     if(!response.ok){
         throw new Error("words.json加载失败");
